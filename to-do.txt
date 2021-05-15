@@ -1,0 +1,3 @@
+- write examples
+- security features
+  - add IP address to user session so cookie can only be accessed from that IP address
