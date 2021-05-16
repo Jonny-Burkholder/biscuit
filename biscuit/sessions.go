@@ -3,6 +3,7 @@ package biscuit
 import (
 	"fmt"
 	"math/rand"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -20,13 +21,14 @@ type user interface {
 
 //Session holds information about a user session
 type session struct {
-	Mux      *sync.Mutex
-	LockChan chan bool
-	Username string
-	CookieID string
-	Alive    bool
-	locked   bool
-	Counter  *counter
+	Mux       *sync.Mutex
+	LockChan  chan bool
+	Username  string
+	CookieID  string
+	IPAddress string
+	Alive     bool
+	locked    bool
+	Counter   *counter
 }
 
 //counter keeps track of login attempts and locks the user out if there are too many attempts
@@ -65,7 +67,7 @@ func NewSessionManager() *sessionManager {
 }
 
 //run() allows the session manager to listen on its channels
-func (mng *sessionManager) run() {
+func (mng *sessionManager) Run() {
 	go func() {
 		defer close(mng.UnlockChan)
 		defer close(mng.KillChan)
@@ -81,7 +83,7 @@ func (mng *sessionManager) run() {
 }
 
 //NewSession generates a new session and adds it to the manager
-func (mng *sessionManager) NewSession(user string) error {
+func (mng *sessionManager) NewSession(user string, r *http.Request) error {
 	_, ok := mng.Users[user]
 	if ok != false {
 		return fmt.Errorf("Invalid: user session %q already in progress", user)
@@ -89,10 +91,11 @@ func (mng *sessionManager) NewSession(user string) error {
 	var mux *sync.Mutex
 	id := mng.newSessionID()
 	mng.Sessions[id] = &session{
-		Mux:      mux,
-		Username: user,
-		CookieID: id,
-		Alive:    false, //default to false, in case of something like
+		Mux:       mux,
+		Username:  user,
+		CookieID:  id,
+		IPAddress: getIP(r),
+		Alive:     false, //default to false, in case of something like
 	}
 	return nil
 }
@@ -121,20 +124,28 @@ func (mng *sessionManager) newSessionID() string {
 }
 
 //Login changes the bool in a user session so that the manager views the sessin as being "alive", or active
-func (s *session) Login() error {
-	if s.Alive != false {
-		return fmt.Errorf("Error: user %q already logged in.", s.Username)
+func (mng *sessionManager) Login(id string) error {
+	sess, ok := mng.Sessions[id]
+	if ok != true {
+		return fmt.Errorf("Error: session ID not found\n%q", id)
 	}
-	s.Alive = true
+	if sess.Alive != false {
+		return fmt.Errorf("Error: user %q already logged in.", sess.Username)
+	}
+	sess.Alive = true
 	return nil
 }
 
 //Logout changes the session "alive" bool to false
-func (s *session) Logout() error {
-	if s.Alive != true {
-		return fmt.Errorf("Error: user %q is not logged in.", s.Username)
+func (mng *sessionManager) Logout(id string) error {
+	sess, ok := mng.Sessions[id]
+	if ok != true {
+		return fmt.Errorf("Error: session ID not found\n%q", id)
 	}
-	s.Alive = false
+	if sess.Alive != true {
+		return fmt.Errorf("Error: user %q is not logged in.", sess.Username)
+	}
+	sess.Alive = false
 	return nil
 }
 

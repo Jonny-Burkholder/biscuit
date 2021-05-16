@@ -1,5 +1,13 @@
+TO DO
 - write examples
+  - login/new session
+  - Vallidate IP Address
 - security features
-  - add IP address to user session so cookie can only be accessed from that IP address
   - add SSL encryption
   - add hashing/signatures to cookies
+
+
+
+COMPLETED
+- security features
+  - add IP address to user session so cookie can only be accessed from that IP address

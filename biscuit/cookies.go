@@ -16,7 +16,11 @@ func (mng *sessionManager) setSessionCookie(w http.ResponseWriter, sess *session
 	return nil
 }
 
-func (mng *sessionManager) deleteSessionCookie(w http.ResponseWriter, c *http.Cookie) error { //see setSessionCookie
+func (mng *sessionManager) deleteSessionCookie(w http.ResponseWriter, r *http.Request) error { //see setSessionCookie
+	c, err := r.Cookie(sessionCookieName + mng.ID)
+	if err != nil {
+		return err
+	}
 	c.Expires = time.Now()
 	c.MaxAge = -1
 	http.SetCookie(w, c)
