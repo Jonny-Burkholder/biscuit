@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"html/template"
 	"log"
 	"net/http"
@@ -17,8 +18,24 @@ requests from http*/
 //feels. The new session manager will run automatically upon instantiation
 var manager = biscuit.NewSessionManager()
 
-//next, we'll retrieve our templates
+//next, we'll retrieve our templates and write a function to render them
 var templates = template.Must(template.ParseGlob("./*.html"))
+
+type page struct {
+	Title string
+}
+
+func renderTemplate(tmpl string, w http.ResponseWriter) {
+	buf := new(bytes.Buffer) //get a buffer to write to so we avoid those nasty superfluous writer calls
+	p := page{Title: "Login"}
+	err := templates.ExecuteTemplate(buf, tmpl+".html", p)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	buf.WriteTo(w)
+	return
+}
 
 //now we will create a basic server to handle user login
 func main() {
@@ -30,11 +47,24 @@ func main() {
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
-
+	renderTemplate("login", w)
 }
 
 func handleVallidate(w http.ResponseWriter, r *http.Request) {
-
+	//normally here we would check the password
+	r.ParseForm()
+	userID, err := manager.NewSession(r.FormValue("username"), r) //create new session in manager by passing a username string and the http request
+	if err != nil {
+		//handle error
+		log.Println(err)
+		return //for simplicity, since this is just an example
+	}
+	manager.SetSessionCookie(w, userID)
+	err = manager.Login(userID)
+	if err != nil {
+		log.Println(err)
+	}
+	http.Redirect(w, r, "home/r.Username", http.StatusFound)
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request)

@@ -10,7 +10,11 @@ import (
 
 var sessionCookieName string = "SESSbsct"
 
-var sessionLength int //should be set by user, but if not, sessions will by default end when the browser is closed
+var defaultSessionLength int //should be set by user for each session manager, but if not, sessions will by default end when the browser is closed
+
+var defautlLockoutTime int = 60 * 5 //by default locks user out for 5 minutes
+
+var defaultMaxLoginAttempts int = 5
 
 var overseer map[string]*sessionManager
 
@@ -22,7 +26,6 @@ type user interface {
 //Session holds information about a user session
 type session struct {
 	Mux       *sync.Mutex
-	LockChan  chan bool
 	Username  string
 	CookieID  string
 	IPAddress string
@@ -33,21 +36,22 @@ type session struct {
 
 //counter keeps track of login attempts and locks the user out if there are too many attempts
 type counter struct {
-	Mux         *sync.Mutex
-	MaxAttempts int
-	Attempts    int
-	ResetTime   int
+	Mux      *sync.Mutex
+	Attempts int
 }
 
 //session manager keeps sessions alive in main
 type sessionManager struct {
-	Mux        *sync.Mutex
-	ID         string
-	UnlockChan chan string
-	KillChan   chan bool
-	Sessions   map[string]*session
-	Users      map[string]user
-	Data       map[string]interface{} //for any data a program might need beyond sessions and users
+	Mux                  *sync.Mutex
+	ID                   string
+	UnlockChan           chan string
+	KillChan             chan bool
+	Sessions             map[string]*session
+	Users                map[string]user
+	Data                 map[string]interface{} //for any data a program might need beyond sessions and users
+	SessionLength        int
+	MaxUserLoginAttempts int
+	UserLockoutTime      int
 }
 
 func NewSessionManager() *sessionManager {
@@ -55,19 +59,22 @@ func NewSessionManager() *sessionManager {
 	id := newMngID()
 	c := make(chan string)
 	mng := &sessionManager{
-		Mux:        mux,
-		ID:         id,
-		UnlockChan: c,
-		Sessions:   make(map[string]*session),
-		Users:      make(map[string]user),
-		Data:       make(map[string]interface{}),
+		Mux:                  mux,
+		ID:                   id,
+		UnlockChan:           c,
+		Sessions:             make(map[string]*session),
+		Users:                make(map[string]user),
+		Data:                 make(map[string]interface{}),
+		SessionLength:        defaultSessionLength,
+		MaxUserLoginAttempts: defaultMaxLoginAttempts,
+		UserLockoutTime:      defautlLockoutTime,
 	}
 	mng.run()
 	return mng
 }
 
 //run() allows the session manager to listen on its channels
-func (mng *sessionManager) Run() {
+func (mng *sessionManager) run() {
 	go func() {
 		defer close(mng.UnlockChan)
 		defer close(mng.KillChan)
@@ -82,11 +89,23 @@ func (mng *sessionManager) Run() {
 	}()
 }
 
+func (mng *sessionManager) SetSessionLength(i int) {
+	mng.SessionLength = i
+}
+
+func (mng *sessionManager) SetMaxAttempts(i int) {
+	mng.MaxUserLoginAttempts = i
+}
+
+func (mng *sessionManager) SetLockoutTime(i int) {
+	mng.UserLockoutTime = i
+}
+
 //NewSession generates a new session and adds it to the manager
-func (mng *sessionManager) NewSession(user string, r *http.Request) error {
+func (mng *sessionManager) NewSession(user string, r *http.Request) (string, error) {
 	_, ok := mng.Users[user]
 	if ok != false {
-		return fmt.Errorf("Invalid: user session %q already in progress", user)
+		return "", fmt.Errorf("Invalid: user session %q already in progress", user)
 	}
 	var mux *sync.Mutex
 	id := mng.newSessionID()
@@ -95,9 +114,16 @@ func (mng *sessionManager) NewSession(user string, r *http.Request) error {
 		Username:  user,
 		CookieID:  id,
 		IPAddress: getIP(r),
-		Alive:     false, //default to false, in case of something like
+		Alive:     false, //default to false, mostly to keep track of invalid login attempts
+		locked:    false,
+		Counter:   newCounter(),
 	}
-	return nil
+	return id, nil
+}
+
+func newCounter() *counter {
+	var mux sync.Mutex
+	return &counter{Mux: &mux}
 }
 
 //generates a new, unique ID for a session manager
@@ -151,17 +177,17 @@ func (mng *sessionManager) Logout(id string) error {
 
 func (mng *sessionManager) CountUp(sess *session) error {
 	sess.Counter.Attempts++
-	if sess.Counter.Attempts == sess.Counter.MaxAttempts {
+	if sess.Counter.Attempts == mng.MaxUserLoginAttempts {
 		sess.locked = true
 		mng.lockout(sess)
-		return fmt.Errorf("Max attempts reached, locked out for %v minutes", sess.Counter.ResetTime/60)
+		return fmt.Errorf("Max attempts reached, locked out for %v minutes", mng.UserLockoutTime/60)
 	}
 	return nil
 }
 
 func (mng *sessionManager) lockout(sess *session) {
 	go func() {
-		time.Sleep(time.Second * time.Duration(sess.Counter.ResetTime))
+		time.Sleep(time.Second * time.Duration(mng.UserLockoutTime))
 		mng.UnlockChan <- sess.CookieID
 	}()
 }

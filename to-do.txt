@@ -1,6 +1,6 @@
 TO DO
 - write examples
-  - login/new session
+  - Login/new session
   - Vallidate IP Address
 - security features
   - add SSL encryption
