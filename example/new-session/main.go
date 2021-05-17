@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -67,4 +68,12 @@ func handleVallidate(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "home/r.Username", http.StatusFound)
 }
 
-func handleHome(w http.ResponseWriter, r *http.Request)
+func handleHome(w http.ResponseWriter, r *http.Request) {
+	cookies := r.Cookies()
+	buf := &bytes.Buffer{}
+	fmt.Fprintf(buf, "Congratulations! You have successfully logged in.\n\n")
+	for _, cookie := range cookies {
+		fmt.Fprintf(buf, "Your cookie ID is %v\n", cookie)
+	}
+	buf.WriteTo(w)
+}
