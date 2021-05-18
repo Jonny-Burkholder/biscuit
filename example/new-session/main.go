@@ -40,11 +40,18 @@ func renderTemplate(tmpl string, w http.ResponseWriter) {
 
 //now we will create a basic server to handle user login
 func main() {
+	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/login", handleLogin) //we'll eschew pages unnecessary to the example, for simplicity
 	http.HandleFunc("/vallidate", handleVallidate)
 	http.HandleFunc("/home/", handleHome)
 
+	fmt.Println("Now serving on port 8080")
+
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func handleIndex(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -65,13 +72,14 @@ func handleVallidate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 	}
-	http.Redirect(w, r, "home/r.Username", http.StatusFound)
+	http.Redirect(w, r, "home/"+r.FormValue("username"), http.StatusFound)
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Path[len("/home/"):]
 	cookies := r.Cookies()
 	buf := &bytes.Buffer{}
-	fmt.Fprintf(buf, "Congratulations! You have successfully logged in.\n\n")
+	fmt.Fprintf(buf, "Congratulations %v! You have successfully logged in.\n\n", name)
 	for _, cookie := range cookies {
 		fmt.Fprintf(buf, "Your cookie ID is %v\n", cookie)
 	}
