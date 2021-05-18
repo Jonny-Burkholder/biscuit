@@ -1,13 +1,18 @@
 TO DO
 - write examples
-  - Login/new session
-  - Vallidate IP Address
+  - Validate password
+  - Validate IP Address
 - security features
   - add SSL encryption
   - add hashing/signatures to cookies
+- other features
+  - performance cookies
+  - preferences cookies
 
 
 
 COMPLETED
+- write examples
+  - Login/new session
 - security features
   - add IP address to user session so cookie can only be accessed from that IP address

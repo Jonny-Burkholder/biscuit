@@ -10,6 +10,10 @@ import (
 
 var sessionCookieName string = "SESSbsct"
 
+var preferenceCookieName string = "PREFbsct"
+
+var performanceCookieName string = "PERFbsct" //I realize the similarity between "preference" and "performance" is confusing, I'll try to come up with better terms
+
 var defaultSessionLength int //should be set by user for each session manager, but if not, sessions will by default end when the browser is closed
 
 var defautlLockoutTime int = 60 * 5 //by default locks user out for 5 minutes
@@ -24,15 +28,28 @@ var overseer map[string]*sessionManager
 
 //user is a generic interface to interact with 3rd party user types
 type user interface {
-	Save() error //a user must have a method to be saved to disk
+	CheckPassword(string) error //a user must have a method to be saved to disk
 }
+
+/*EXAMPLE OF HOW TO IMPLEMENT USER INTERFACE
+type myUser struct{
+	username string
+	password string
+}
+
+func (user *myUser) CheckPassword(pswd string) error{
+	if user.password != pswd{
+		return fmt.Errorf("Passwords do not match")
+	}
+}
+*/
 
 //Session holds information about a user session
 type session struct {
 	mux       *sync.Mutex
 	username  string
 	cookieID  string
-	ipAddress []string
+	ipAddress map[string]bool //false is blocked, while true is allowed
 	alive     bool
 	locked    bool
 	counter   *counter
@@ -115,11 +132,14 @@ func (mng *sessionManager) NewSession(user string, r *http.Request) (string, err
 	}
 	var mux *sync.Mutex
 	id := mng.newSessionID()
+	ip := getIP(r)
+	ipMap := make(map[string]bool)
+	ipMap[ip] = true
 	mng.sessions[id] = &session{
 		mux:       mux,
 		username:  user,
 		cookieID:  id,
-		ipAddress: []string{getIP(r)},
+		ipAddress: ipMap,
 		alive:     false, //default to false, mostly to keep track of invalid login attempts
 		locked:    false,
 		counter:   newCounter(),
@@ -155,6 +175,11 @@ func (mng *sessionManager) newSessionID() string {
 	}
 }
 
+//addIP adds a new IP address to the session's ipAddress map, and sets its state to false
+func (mng *sessionManager) addIP(sess *session, ip string) {
+	sess.ipAddress[ip] = false
+}
+
 //Login changes the bool in a user session so that the manager views the sessin as being "alive", or active
 func (mng *sessionManager) Login(id string) error {
 	sess, ok := mng.sessions[id]
@@ -166,6 +191,16 @@ func (mng *sessionManager) Login(id string) error {
 	}
 	sess.alive = true
 	return nil
+}
+
+//allowIP sets the state of a given IP address to true
+func (mng *sessionManager) allowIP(sess *session, ip string) {
+	sess.ipAddress[ip] = true
+}
+
+//BlockIP sets the state of a given IP address to false
+func (mng *sessionManager) BlockIP(sess *session, ip string) {
+	sess.ipAddress[ip] = false
 }
 
 //Logout changes the session "alive" bool to false

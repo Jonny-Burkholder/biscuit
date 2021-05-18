@@ -10,13 +10,13 @@ import (
 
 //this file is for security measures like encrypting cookies and checking ip addresses
 
-type errorUnknownIP struct {
+type errorUnauthorizedIP struct {
 	IP string
 }
 
-//Error returns the content body of the errorUnknownIP error type
-func (err errorUnknownIP) Error() string {
-	return "Unknown IP address: " + err.IP + " does not match user address."
+//Error returns the content body of the errorUnauthorizedIP error type
+func (err errorUnauthorizedIP) Error() string {
+	return "Unauthorized IP address: " + err.IP + " does not match user address."
 }
 
 //getIP returns the client's IP address
@@ -32,12 +32,14 @@ func getIP(r *http.Request) string {
 //what is stored in the session manager
 func (mng *sessionManager) ValidateIP(r *http.Request, sess *session) error {
 	rAddress := getIP(r)
-	for _, ip := range sess.ipAddress {
-		if rAddress == ip {
-			return nil
-		}
+	ip, ok := sess.ipAddress[rAddress]
+	if ok != true {
+		mng.addIP(sess, rAddress)
 	}
-	return errorUnknownIP{IP: rAddress}
+	if ip != true {
+		return errorUnauthorizedIP{IP: rAddress}
+	}
+	return nil
 }
 
 //Hash returns a hash from an input string based on the session manager's encryption type
