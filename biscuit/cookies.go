@@ -1,6 +1,7 @@
 package biscuit
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -18,12 +19,30 @@ func (mng *sessionManager) SetSessionCookie(w http.ResponseWriter, id string) er
 	return nil
 }
 
-//DeleteSessionCookie sets a session cookie to expire immediately, thus ending the user's session
-func (mng *sessionManager) DeleteSessionCookie(w http.ResponseWriter, r *http.Request) error { //see setSessionCookie
-	c, err := r.Cookie(sessionCookieName + mng.id)
-	if err != nil {
-		return err
+//SetPerformanceCookie adds a cookie to the browser that lives indefinitely
+func (mng *sessionManager) SetPerformanceCookie(w http.ResponseWriter, data []byte) {
+	cookie := http.Cookie{
+		Name:     performanceCookieName + mng.id,
+		Value:    fmt.Sprint(data),
+		HttpOnly: true,
 	}
+	http.SetCookie(w, &cookie)
+}
+
+//SetPreferencesCookie adds a cookie that stores user preferences in browser for JS to use.
+//For simplicity's sake, this is passed as a slice of bytes that must be decoded in browser
+func (mng *sessionManager) SetPreferencesCookie(w http.ResponseWriter, pref []byte) {
+	cookie := http.Cookie{
+		Name:     preferenceCookieName + mng.id,
+		Value:    fmt.Sprint(pref),
+		HttpOnly: true,
+	}
+	http.SetCookie(w, &cookie)
+}
+
+//DeleteCookie sets a cookie to expire immediately. This is the function to be used for deleting
+//All types of cookies in biscuit
+func (mng *sessionManager) DeleteCookie(w http.ResponseWriter, c *http.Cookie) error { //see setSessionCookie
 	c.Expires = time.Now()
 	c.MaxAge = -1
 	http.SetCookie(w, c)
