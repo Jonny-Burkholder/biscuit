@@ -20,9 +20,11 @@ var defautlLockoutTime int = 60 * 5 //by default locks user out for 5 minutes
 
 var defaultMaxLoginAttempts int = 5
 
-var defaultEncryptionType string = "sha512"
+var defaultEncryptionType string = "bcrypt"
 
-var availableEncryptionTypes = []string{"sha512"} //I'll add more later. I have to decide which ones I'll allow
+var defaultHashStrength int = 5
+
+var availableEncryptionTypes = []string{"bcrypt", "sha512"} //I'll add more later. I have to decide which ones I'll allow
 
 var overseer map[string]*sessionManager
 
@@ -74,6 +76,7 @@ type sessionManager struct {
 	maxUserLoginAttempts int
 	userLockoutTime      int
 	encryptionType       string
+	hashStrength         int
 }
 
 func NewSessionManager() *sessionManager {
@@ -91,6 +94,7 @@ func NewSessionManager() *sessionManager {
 		maxUserLoginAttempts: defaultMaxLoginAttempts,
 		userLockoutTime:      defautlLockoutTime,
 		encryptionType:       defaultEncryptionType,
+		hashStrength:         defaultHashStrength,
 	}
 	mng.run()
 	return mng
@@ -112,16 +116,47 @@ func (mng *sessionManager) run() {
 	}()
 }
 
+//SetSettionLength determines how long a session lasts in the session manager. The session manager
+//will use the same length of time for session cookies as well as the in-memory session handler
 func (mng *sessionManager) SetSessionLength(i int) {
 	mng.sessionLength = i
 }
 
+//SetMaxAttempts determines the maximum number of incorrect password attempts a user has before being
+//locked out of their account
 func (mng *sessionManager) SetMaxAttempts(i int) {
 	mng.maxUserLoginAttempts = i
 }
 
+//SetLockoutTime determines, in seconds, how long a user will be locked out of their account for
+//reaching the maximimum number of login attempts
 func (mng *sessionManager) SetLockoutTime(i int) {
 	mng.userLockoutTime = i
+}
+
+//SetEncryptionType sets which encryption type will be used by default in the session manager for
+//hashing passwords and other data
+func (mng *sessionManager) SetEncryptionType(s string) error {
+	for _, val := range availableEncryptionTypes {
+		if s == val {
+			mng.encryptionType = val
+		}
+	}
+	return fmt.Errorf("Error: encryption type %q not supported", s)
+}
+
+//SetHashStrength changes the default hash strength for passwords hashed by the session manager.
+//Hash strenght must be between 1 and 10
+func (mng *sessionManager) SetHashStrength(i int) error {
+	if i < 1 {
+		return fmt.Errorf("Error: hash strength must be greater than 0.")
+	} else if i > 10 {
+		i := i % 10
+		mng.hashStrength = i
+		return fmt.Errorf("Maximum hash strength is 10. Hash strength set to %v.", i)
+	}
+	mng.hashStrength = i
+	return nil
 }
 
 //NewSession generates a new session and adds it to the manager

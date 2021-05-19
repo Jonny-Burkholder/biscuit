@@ -41,7 +41,7 @@ func (mng *sessionManager) SetPreferencesCookie(w http.ResponseWriter, pref []by
 }
 
 //DeleteCookie sets a cookie to expire immediately. This is the function to be used for deleting
-//All types of cookies in biscuit
+//all types of cookies in biscuit
 func (mng *sessionManager) DeleteCookie(w http.ResponseWriter, c *http.Cookie) error { //see setSessionCookie
 	c.Expires = time.Now()
 	c.MaxAge = -1
