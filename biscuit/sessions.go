@@ -30,7 +30,7 @@ var overseer map[string]*sessionManager
 
 //user is a generic interface to interact with 3rd party user types
 type user interface {
-	CheckPassword(string) error //a user must have a method to check password
+	CreatePassword(string) error //a user must have a method to create a password that returns an error
 }
 
 /*EXAMPLE OF HOW TO IMPLEMENT USER INTERFACE
