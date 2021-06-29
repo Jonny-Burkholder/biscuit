@@ -10,7 +10,7 @@ import (
 func (mng *sessionManager) SetSessionCookie(w http.ResponseWriter, id string) error { //I can't think of any errors to return, but I'm sure I need to return one
 	sess := mng.sessions[id]
 	cookie := http.Cookie{
-		Name:     sessionCookieName + mng.id,
+		Name:     sessionCookieName + mng.id, //ok, this makes it a little tricky to retrieve though
 		Value:    sess.cookieID,
 		MaxAge:   mng.sessionLength,
 		HttpOnly: true,
