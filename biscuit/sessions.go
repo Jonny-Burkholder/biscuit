@@ -267,3 +267,12 @@ func (mng *sessionManager) lockout(sess *session) {
 		mng.unlockChan <- sess.cookieID
 	}()
 }
+
+//GetSession allows a user to retrieve a session
+func (mng *sessionManager) GetSession(id string) (*session, error) {
+	sess, ok := mng.sessions[id]
+	if ok != true {
+		return &session{}, fmt.Errorf("Session %q not found", id)
+	}
+	return sess, nil
+}
