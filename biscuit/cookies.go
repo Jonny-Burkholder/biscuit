@@ -48,3 +48,18 @@ func (mng *sessionManager) DeleteCookie(w http.ResponseWriter, c *http.Cookie) e
 	http.SetCookie(w, c)
 	return nil
 }
+
+//SessionCookie returns the var sessionCookieName
+func SessionCookie() string {
+	return sessionCookieName
+}
+
+//PreferenceCookie returns the var prefCookieName
+func PreferenceCookie() string {
+	return preferenceCookieName
+}
+
+//PerformanceCookie returns the var perfCookieName
+func PerformanceCookie() string {
+	return performanceCookieName
+}
