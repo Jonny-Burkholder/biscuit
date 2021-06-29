@@ -276,3 +276,13 @@ func (mng *sessionManager) GetSession(id string) (*session, error) {
 	}
 	return sess, nil
 }
+
+//GetNameFromID takes as input a session ID from the session cookie, and returns the name from
+//the user session
+func (mng *sessionManager) GetNameFromID(id string) (string, error) {
+	sess, err := mng.GetSession(id)
+	if err != nil {
+		return "", err
+	}
+	return sess.username, nil
+}
