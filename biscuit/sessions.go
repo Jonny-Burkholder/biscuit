@@ -160,6 +160,8 @@ func (mng *sessionManager) SetHashStrength(i int) error {
 }
 
 //NewSession generates a new session and adds it to the manager
+//In next update, session number should be hashed in the session manager, and the unhashed
+//session number should be returned
 func (mng *sessionManager) NewSession(user string, r *http.Request) (string, error) {
 	_, ok := mng.users[user]
 	if ok != false {
