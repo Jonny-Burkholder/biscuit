@@ -299,3 +299,15 @@ func (mng *sessionManager) GetRole(id string) (string, error) {
 	}
 	return user.role, nil
 }
+
+//CheckRole takes a role and user ID as inputs and returns an error if the roles don't match
+func (mng *sessionManager) CheckRole(role, id string) error {
+	userRole, err := mng.GetRole(id)
+	if err != nil {
+		return err
+	}
+	if userRole != role {
+		return fmt.Errorf("Roles do not matched. Wanted %v, got %v", role, userRole)
+	}
+	return nil
+}
