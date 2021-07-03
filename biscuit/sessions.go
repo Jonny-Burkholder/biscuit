@@ -311,3 +311,29 @@ func (mng *sessionManager) CheckRole(role, id string) error {
 	}
 	return nil
 }
+
+//VerifySession verifies that a user has and is logged in. If either of these
+//conditions is unmet, it will return a non-nil error
+func (mng *sessionManager) VerifySession(id string) error {
+	sess, err := mng.GetSession(id)
+	if err != nil {
+		return err
+	}
+	if sess.alive != true {
+		return fmt.Errorf("User %v has a session, but is inactive", id)
+	}
+	return nil
+}
+
+//VerifySessionWithIP is similar to VerifySession, except that it also checks that the
+//request is coming from an IP address already approved by the session manager
+func (mng *sessionManager) VerifySessionWithIP(id string, r *http.Request) error {
+	sess, err := mng.GetSession(id)
+	if err != nil {
+		return err
+	}
+	if sess.alive != true {
+		return fmt.Errorf("User %v has a session, but is inactive", id)
+	}
+	return mng.ValidateIP(r, sess)
+}
