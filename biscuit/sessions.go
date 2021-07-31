@@ -219,7 +219,7 @@ func (mng *sessionManager) addIP(sess *session, ip string) {
 	sess.ipAddress[ip] = false
 }
 
-//Login changes the bool in a user session so that the manager views the sessin as being "alive", or active
+//Login changes the bool in a user session so that the manager views the session as being "alive", or active
 func (mng *sessionManager) Login(id string) error {
 	sess, ok := mng.sessions[id]
 	if ok != true {

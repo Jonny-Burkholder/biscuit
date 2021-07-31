@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/bcrypt" //need to lose this, it's faulty
 )
 
 /*This part of the package is under construction. Note that stronger security features and more robust
