@@ -20,11 +20,11 @@ var defautlLockoutTime int = 60 * 5 //by default locks user out for 5 minutes
 
 var defaultMaxLoginAttempts int = 5
 
-var defaultEncryptionType string = "bcrypt"
+var defaultEncryptionType string = "sha512"
 
 var defaultHashStrength int = 5
 
-var availableEncryptionTypes = []string{"bcrypt", "sha512"} //I'll add more later. I have to decide which ones I'll allow
+var availableEncryptionTypes = []string{"sha512"} //I'll add more later. I have to decide which ones I'll allow
 
 var overseer map[string]*sessionManager
 
