@@ -69,6 +69,9 @@ func (mng *sessionManager) Hash(s string) (string, error) {
 //CheckPassword takes a password string and compares it to a hash to see if they match.
 //The function returns an error if they do not match, and nil if they do match
 func (mng *sessionManager) CheckPassword(pswd string, hash string) error {
+	if mng.encryptionType == "bcrypt" {
+		return bcrypt.CompareHashAndPassword([]byte(hash), []byte(pswd))
+	}
 	hash, err := mng.Hash(hash)
 	if err != nil {
 		return err
