@@ -3,9 +3,10 @@ package biscuit
 import (
 	"crypto/md5"
 	"crypto/sha512"
-	"encoding/base64"
 	"fmt"
 	"net/http"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 /*This part of the package is under construction. Note that stronger security features and more robust
@@ -48,18 +49,17 @@ func (mng *sessionManager) ValidateIP(r *http.Request, sess *session) error {
 //Hash returns a hash from an input string based on the session manager's encryption type
 func (mng *sessionManager) Hash(s string) (string, error) {
 	switch mng.encryptionType {
-	case "md5": //non b-crypt hashing will be updated in the future to incorporate hashing rounds as well as salting
-		hash := md5.Sum([]byte(s))
-		return base64.URLEncoding.EncodeToString(hash[:]), nil
-	case "sha512": //can't figure out how to get this to hash multiple times
-		comp := sha512.New()
-
-		hash, err := comp.Write([]byte(s))
-
+	case "bcrypt":
+		hash, err := bcrypt.GenerateFromPassword([]byte(s), mng.hashStrength)
 		if err != nil {
 			return "", err
 		}
-
+		return fmt.Sprint(hash), nil
+	case "md5": //non b-crypt hashing will be updated in the future to incorporate hashing rounds as well as salting
+		hash := md5.Sum([]byte(s))
+		return fmt.Sprint(hash), nil
+	case "sha512": //can't figure out how to get this to hash multiple times
+		hash := sha512.Sum512([]byte(s))
 		return fmt.Sprint(hash), nil
 	default:
 		return "", fmt.Errorf("Error hashing data: %q not supported.", s)
