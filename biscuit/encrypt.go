@@ -47,37 +47,46 @@ func (mng *sessionManager) ValidateIP(r *http.Request, sess *session) error {
 }
 
 //Hash returns a hash from an input string based on the session manager's encryption type
-func (mng *sessionManager) Hash(s string) (string, error) {
+func (mng *sessionManager) Hash(s string) ([]byte, error) {
 	switch mng.encryptionType {
 	case "bcrypt":
 		hash, err := bcrypt.GenerateFromPassword([]byte(s), mng.hashStrength)
 		if err != nil {
-			return "", err
+			return []byte{}, err
 		}
-		return fmt.Sprint(hash), nil
+		return hash, nil
 	case "md5": //non b-crypt hashing will be updated in the future to incorporate hashing rounds as well as salting
 		hash := md5.Sum([]byte(s))
-		return fmt.Sprint(hash), nil
+
+		//this next part is a little hacky, but it should do the job
+		hashed := []byte{}
+
+		for _, b := range hash {
+			hashed = append(hashed, b)
+		}
+
+		return hashed, nil
 	case "sha512": //can't figure out how to get this to hash multiple times
 		hash := sha512.Sum512([]byte(s))
-		return fmt.Sprint(hash), nil
+
+		hashed := []byte{}
+
+		for _, b := range hash {
+			hashed = append(hashed, b)
+		}
+
+		return hashed, nil
 	default:
-		return "", fmt.Errorf("Error hashing data: %q not supported.", s)
+		return []byte{}, fmt.Errorf("Error hashing data: %q not supported.", s)
 	}
 }
 
 //CheckPassword takes a password string and compares it to a hash to see if they match.
 //The function returns an error if they do not match, and nil if they do match
-func (mng *sessionManager) CheckPassword(pswd string, hash string) error {
+func (mng *sessionManager) CheckPassword(pswd string, hash []byte) error {
 	if mng.encryptionType == "bcrypt" {
-		return bcrypt.CompareHashAndPassword([]byte(hash), []byte(pswd))
+		return bcrypt.CompareHashAndPassword(hash, []byte(pswd))
+	} else {
+		return fmt.Errorf("Sorry, still working on anything that's not bcrypt")
 	}
-	hash, err := mng.Hash(hash)
-	if err != nil {
-		return err
-	}
-	if pswd != hash {
-		return fmt.Errorf("Error: passwords do not match.")
-	}
-	return nil
 }
