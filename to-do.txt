@@ -8,6 +8,9 @@ TO DO
 - other features
   - performance cookies
   - preferences cookies
+  - add Save() function to session manager
+  - add Load() function for session manager
+  - probably have NewSessionManager() just return an empty manager, with a necessary further call to init()
 
 
 

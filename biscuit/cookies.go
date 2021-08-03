@@ -10,7 +10,7 @@ import (
 func (mng *sessionManager) SetSessionCookie(w http.ResponseWriter, id string) error { //I can't think of any errors to return, but I'm sure I need to return one
 	sess := mng.sessions[id]
 	cookie := http.Cookie{
-		Name:     sessionCookieName + mng.id, //ok, this makes it a little tricky to retrieve though
+		Name:     sessionCookieName, //Eventually, I'd like this to be the cookie name + managerID. Same goes for other cookies. Should probably hash them too? Just something simple like sha512, so it's easy to retrieve
 		Value:    sess.cookieID,
 		MaxAge:   mng.sessionLength,
 		HttpOnly: true,
@@ -22,7 +22,7 @@ func (mng *sessionManager) SetSessionCookie(w http.ResponseWriter, id string) er
 //SetPerformanceCookie adds a cookie to the browser that lives indefinitely
 func (mng *sessionManager) SetPerformanceCookie(w http.ResponseWriter, data []byte) {
 	cookie := http.Cookie{
-		Name:     performanceCookieName + mng.id,
+		Name:     performanceCookieName, //eventually + mng.ID
 		Value:    fmt.Sprint(data),
 		HttpOnly: true,
 	}
@@ -33,7 +33,7 @@ func (mng *sessionManager) SetPerformanceCookie(w http.ResponseWriter, data []by
 //For simplicity's sake, this is passed as a slice of bytes that must be decoded in browser
 func (mng *sessionManager) SetPreferencesCookie(w http.ResponseWriter, pref []byte) {
 	cookie := http.Cookie{
-		Name:     preferenceCookieName + mng.id,
+		Name:     preferenceCookieName, //+mng.ID
 		Value:    fmt.Sprint(pref),
 		HttpOnly: true,
 	}
