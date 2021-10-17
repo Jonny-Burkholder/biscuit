@@ -163,10 +163,16 @@ func (mng *sessionManager) SetHashStrength(i int) error {
 //NewSession generates a new session and adds it to the manager
 //In next update, session number should be hashed in the session manager, and the unhashed
 //session number should be returned
-func (mng *sessionManager) NewSession(user, role string, r *http.Request) (string, error) {
+func (mng *sessionManager) NewSession(user string, r *http.Request, role ...string) (string, error) {
 	_, ok := mng.users[user]
 	if ok != false {
 		return "", fmt.Errorf("Invalid: user session %q already in progress", user)
+	}
+
+	var userRole string
+
+	if len(role) > 0 {
+		userRole = role[0]
 	}
 	var mux *sync.Mutex
 	id := mng.newSessionID()
@@ -176,7 +182,7 @@ func (mng *sessionManager) NewSession(user, role string, r *http.Request) (strin
 	mng.sessions[id] = &session{
 		mux:       mux,
 		username:  user,
-		role:      role,
+		role:      userRole,
 		cookieID:  id,
 		ipAddress: ipMap,
 		alive:     false, //default to false, mostly to keep track of invalid login attempts
