@@ -12,6 +12,7 @@ TO DO
   - add Save() function to session manager
   - add Load() function for session manager
   - probably have NewSessionManager() just return an empty manager, with a necessary further call to init()
+  - Update session manager to take config file, instead of just having a bunch of fields
 
 
 

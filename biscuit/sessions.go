@@ -1,6 +1,7 @@
 package biscuit
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -344,4 +345,12 @@ func (mng *sessionManager) VerifySessionWithIP(id string, r *http.Request) error
 		return fmt.Errorf("User %v has a session, but is inactive", id)
 	}
 	return mng.ValidateIP(r, sess)
+}
+
+//Marshal takes a session manager and marshals it to json for DB storage, if you're
+//into that sort of thing
+func (mng *sessionManager) Marshal() ([]byte, error) {
+	//we'll need to manually change this to fill in the non-exported
+	//fields for the session manager
+	return json.Marshal(mng)
 }
