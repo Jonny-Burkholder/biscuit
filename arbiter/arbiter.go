@@ -6,9 +6,7 @@ import (
 	"os"
 )
 
-/*this will be an eventually robust middleware package that will be in fact so robust that it
-will split off from this repo and become its own ultra-popular middleware package that will
-eventually gain sentience and take over the world. Probably*/
+/*Arbiter is a subpackage for logging, security, and middleware*/
 
 type sessionManager interface {
 	CheckRole(roles []string, id string) error
@@ -59,28 +57,6 @@ func CheckPanic(err error) {
 		log.Panic(err)
 	}
 }
-
-//CheckFunc reads an error and excecutes a function if non-nil
-func CheckRedirect(err error, w http.ResponseWriter, r *http.Request, s string, i int) {
-	if err != nil {
-		log.Println(err)
-		http.Redirect(w, r, s, i)
-		return
-	}
-}
-
-/* UNFINISHED AND PROBABLY ALWAYS WILL BE
-//RestrictedRedirect wraps a handler function and redirects a user to a new page if they do not have
-//permission to access the restricted page
-func RestrictedRedirect(handler func(w http.ResponseWriter, r *http.Request), redirect func(w http.ResponseWriter, r *http.Request, s string, i int)) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request){
-		cookie, err := r.Cookie(biscuit.SessionCookie())
-		if err != nil{
-			redirect()
-		}
-	}
-}
-*/
 
 //Restricted wraps a handler to check authentication before allowing a user to access the page, and
 //returns http.Error() if the user is unauthorized. User may decide on a case-to-case basis which

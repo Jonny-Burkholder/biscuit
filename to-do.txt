@@ -5,6 +5,7 @@ TO DO
 - security features
   - add SSL encryption
   - add hashing/signatures to cookies
+  - Add salting to non-bcrypt hashes (probably with a discrete wrapper function)
 - other features
   - performance cookies
   - preferences cookies

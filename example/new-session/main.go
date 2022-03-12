@@ -61,7 +61,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 func handleVallidate(w http.ResponseWriter, r *http.Request) {
 	//normally here we would check the password
 	r.ParseForm()
-	userID, err := manager.NewSession(r.FormValue("username"), "user", r) //create new session in manager by passing a username string and the http request
+	userID, err := manager.NewSession(r.FormValue("username"), r) //create new session in manager by passing a username string and the http request
 	if err != nil {
 		//handle error
 		log.Println(err)

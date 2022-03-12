@@ -56,26 +56,25 @@ func (mng *sessionManager) Hash(s string) ([]byte, error) {
 		}
 		return hash, nil
 	case "md5": //non b-crypt hashing will be updated in the future to incorporate hashing rounds as well as salting
+		//initial hash
 		hash := md5.Sum([]byte(s))
 
-		//this next part is a little hacky, but it should do the job
-		hashed := []byte{}
-
-		for _, b := range hash {
-			hashed = append(hashed, b)
+		//re-hash according to manager hash strength
+		for i := 1; i < mng.hashStrength; i++ {
+			hash = md5.Sum(hash[:])
 		}
 
-		return hashed, nil
-	case "sha512": //can't figure out how to get this to hash multiple times
+		return hash[:], nil
+	case "sha512":
+		//initial hash
 		hash := sha512.Sum512([]byte(s))
 
-		hashed := []byte{}
-
-		for _, b := range hash {
-			hashed = append(hashed, b)
+		//re-hash for strength and stuff
+		for i := 1; i < mng.hashStrength; i++ {
+			hash = sha512.Sum512(hash[:])
 		}
 
-		return hashed, nil
+		return hash[:], nil
 	default:
 		return []byte{}, fmt.Errorf("Error hashing data: %q not supported.", s)
 	}
