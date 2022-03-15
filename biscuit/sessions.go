@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -47,7 +48,9 @@ func (user *myUser) CheckPassword(pswd string) error{
 }
 */
 
-//Session holds information about a user session
+//Session holds information about a user session. May depricate certain
+//fields in the future, instead using something like data interface{} for
+//user or other data
 type session struct {
 	mux       *sync.Mutex
 	username  string
@@ -65,7 +68,8 @@ type counter struct {
 	attempts int
 }
 
-//session manager keeps sessions alive in main
+//sessionManager is an in-memory struct that keeps track of
+//session data
 type sessionManager struct {
 	mux                  *sync.Mutex
 	id                   string
@@ -81,6 +85,9 @@ type sessionManager struct {
 	hashStrength         int
 }
 
+//NewSessionManager is the basis of the user API. It takes no arguments, and
+//returns a pointer to a session manager struct. The session manager is automatically
+//running on creation
 func NewSessionManager() *sessionManager {
 	var mux *sync.Mutex
 	id := newMngID()
@@ -102,7 +109,36 @@ func NewSessionManager() *sessionManager {
 	return mng
 }
 
-//run() allows the session manager to listen on its channels
+//LoadSessionManager takes a string argument "path", which points
+//to a json serialized session manager on disk. It then loads this
+//session manager into an in-memory struct, returning its pointer.
+//Eventually we'll do a better job sanatizing the path string, but
+//for now I just want it in place
+func LoadSessionManager(path string) (*sessionManager, error) {
+	f, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	//will have to update this when we move things to
+	//
+	mng := &sessionManager{}
+	err = json.Unmarshal(f, mng)
+	if err != nil {
+		return nil, err
+	}
+	return mng, err
+}
+
+//Marshal takes a session manager and marshals it to json for DB storage, if you're
+//into that sort of thing
+func (mng *sessionManager) Marshal() ([]byte, error) {
+	//we'll need to manually change this to fill in the non-exported
+	//fields for the session manager
+	return json.Marshal(mng)
+}
+
+//run() allows the session manager to listen asyncronously
+//on its various channels and perform tasks with them
 func (mng *sessionManager) run() {
 	go func() {
 		defer close(mng.unlockChan)
@@ -345,12 +381,4 @@ func (mng *sessionManager) VerifySessionWithIP(id string, r *http.Request) error
 		return fmt.Errorf("User %v has a session, but is inactive", id)
 	}
 	return mng.ValidateIP(r, sess)
-}
-
-//Marshal takes a session manager and marshals it to json for DB storage, if you're
-//into that sort of thing
-func (mng *sessionManager) Marshal() ([]byte, error) {
-	//we'll need to manually change this to fill in the non-exported
-	//fields for the session manager
-	return json.Marshal(mng)
 }
