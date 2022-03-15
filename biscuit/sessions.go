@@ -53,7 +53,7 @@ func (user *myUser) CheckPassword(pswd string) error{
 //user or other data
 type session struct {
 	mux       *sync.Mutex
-	username  string
+	username  string //not every session needs a user, need to update this
 	role      string
 	cookieID  string
 	ipAddress map[string]bool //false is blocked, while true is allowed
@@ -72,7 +72,7 @@ type counter struct {
 //session data
 type sessionManager struct {
 	mux                  *sync.Mutex
-	id                   string
+	id                   string //the id is for if you're using multiple session managers, which I don't recommend. I might remove
 	unlockChan           chan string
 	killChan             chan bool
 	sessions             map[string]*session
@@ -174,6 +174,9 @@ func (mng *sessionManager) SetLockoutTime(i int) {
 
 //SetEncryptionType sets which encryption type will be used by default in the session manager for
 //hashing passwords and other data
+//This eventually needs to be split into hashing and encryption as separate ideas within
+//the session manager, as we'll want to have both available. Also maybe I'll consider using
+//an int instead of a string, like with Rainman
 func (mng *sessionManager) SetEncryptionType(s string) error {
 	for _, val := range availableEncryptionTypes {
 		if s == val {
@@ -184,7 +187,8 @@ func (mng *sessionManager) SetEncryptionType(s string) error {
 }
 
 //SetHashStrength changes the default hash strength for passwords hashed by the session manager.
-//Hash strenght must be between 1 and 10
+//Hash strength must be between 1 and 10. Why 10? Completely arbitrary. I'll update that with
+//an informed decision eventually
 func (mng *sessionManager) SetHashStrength(i int) error {
 	if i < 1 {
 		return fmt.Errorf("Error: hash strength must be greater than 0.")
@@ -199,7 +203,9 @@ func (mng *sessionManager) SetHashStrength(i int) error {
 
 //NewSession generates a new session and adds it to the manager
 //In next update, session number should be hashed in the session manager, and the unhashed
-//session number should be returned
+//session number should be returned. Ok I know I wrote that part of the comment, but I'm not
+//sure it makes any sense, I don't think that provides any security and it's probably just
+//a waste of time
 func (mng *sessionManager) NewSession(user string, r *http.Request, role ...string) (string, error) {
 	_, ok := mng.users[user]
 	if ok != false {
@@ -246,6 +252,9 @@ func newMngID() string {
 	}
 }
 
+//newSessionID generates a new random ID for a session
+//Currently this is not using what is considered a cryptographically
+//secure randomizer. I'll switch this to crypto.Rand()
 func (mng *sessionManager) newSessionID() string {
 	for {
 		rand.Seed(time.Now().Unix())
@@ -257,9 +266,10 @@ func (mng *sessionManager) newSessionID() string {
 	}
 }
 
-//addIP adds a new IP address to the session's ipAddress map, and sets its state to false
+//addIP adds a new IP address to the session's ipAddress map, and sets its state
+//to true, indicating that it has not been blocked
 func (mng *sessionManager) addIP(sess *session, ip string) {
-	sess.ipAddress[ip] = false
+	sess.ipAddress[ip] = true
 }
 
 //Login changes the bool in a user session so that the manager views the session as being "alive", or active
@@ -275,17 +285,20 @@ func (mng *sessionManager) Login(id string) error {
 	return nil
 }
 
-//allowIP sets the state of a given IP address to true
+//allowIP sets the state of a given IP address to true, indicating
+//that is is allowed
 func (mng *sessionManager) allowIP(sess *session, ip string) {
 	sess.ipAddress[ip] = true
 }
 
-//BlockIP sets the state of a given IP address to false
+//BlockIP sets the state of a given IP address to false, indicating
+//that it has been blocked
 func (mng *sessionManager) BlockIP(sess *session, ip string) {
 	sess.ipAddress[ip] = false
 }
 
-//Logout changes the session "alive" bool to false
+//Logout changes the session "alive" bool to false, so that the session
+//manager no longer considers the session to be active
 func (mng *sessionManager) Logout(id string) error {
 	sess, ok := mng.sessions[id]
 	if ok != true {
@@ -298,6 +311,8 @@ func (mng *sessionManager) Logout(id string) error {
 	return nil
 }
 
+//CountUp increments the number of login attempts for a session, and locks the
+//session if the attempts reaches the maximum attempts allowed by the session manager
 func (mng *sessionManager) CountUp(sess *session) error {
 	sess.counter.attempts++
 	if sess.counter.attempts == mng.maxUserLoginAttempts {
@@ -308,14 +323,18 @@ func (mng *sessionManager) CountUp(sess *session) error {
 	return nil
 }
 
+//Lockout locks out a user session for the time indicated by the session manager
 func (mng *sessionManager) lockout(sess *session) {
 	go func() {
+		//should probably update this to a ticker
 		time.Sleep(time.Second * time.Duration(mng.userLockoutTime))
 		mng.unlockChan <- sess.cookieID
 	}()
 }
 
-//GetSession allows a user to retrieve a session
+//GetSession takes a session id and returns a pointer to a session and an error.
+//If the session is not found, a non-nil error will be returned. Typically the user
+//is retreiving this session ID from a request cookie value
 func (mng *sessionManager) GetSession(id string) (*session, error) {
 	sess, ok := mng.sessions[id]
 	if ok != true {
@@ -325,7 +344,7 @@ func (mng *sessionManager) GetSession(id string) (*session, error) {
 }
 
 //GetNameFromID takes as input a session ID from the session cookie, and returns the name from
-//the user session
+//the user session. Should be updated to more generically return user data from the session
 func (mng *sessionManager) GetNameFromID(id string) (string, error) {
 	sess, err := mng.GetSession(id)
 	if err != nil {
@@ -334,7 +353,9 @@ func (mng *sessionManager) GetNameFromID(id string) (string, error) {
 	return sess.username, nil
 }
 
-//GetRole returns the role of a user based on their id
+//GetRole takes a session ID string argument, and returns the user's
+//role if found. If not found, it returns an empty string and a non-
+//nil error
 func (mng *sessionManager) GetRole(id string) (string, error) {
 	user, err := mng.GetSession(id)
 	if err != nil {
@@ -343,7 +364,9 @@ func (mng *sessionManager) GetRole(id string) (string, error) {
 	return user.role, nil
 }
 
-//CheckRole takes a role and user ID as inputs and returns an error if the roles don't match
+//CheckRole takes a slice of strings, "roles", and a session ID. It checks the session
+//to see if the session role matches any of the roles in the slice. This should be updated
+//to take a hash map for constant lookup time
 func (mng *sessionManager) CheckRole(roles []string, id string) error {
 	userRole, err := mng.GetRole(id)
 	if err != nil {
@@ -357,8 +380,9 @@ func (mng *sessionManager) CheckRole(roles []string, id string) error {
 	return fmt.Errorf("Roles do not matched. Wanted %v, got %v", roles, userRole)
 }
 
-//VerifySession verifies that a user has and is logged in. If either of these
-//conditions is unmet, it will return a non-nil error
+//VerifySession takes a session id as an input and returns a non-nil
+//error if the session does not exist, or if the session's loggedIn
+//field is set to false
 func (mng *sessionManager) VerifySession(id string) error {
 	sess, err := mng.GetSession(id)
 	if err != nil {
@@ -370,8 +394,10 @@ func (mng *sessionManager) VerifySession(id string) error {
 	return nil
 }
 
-//VerifySessionWithIP is similar to VerifySession, except that it also checks that the
-//request is coming from an IP address already approved by the session manager
+//VerifySessionWithIP, like VerifySession, takes a session ID as input
+//and returns a non-nil error if the session does not exist, or if the
+//session's loggedIn bool is set to false. In addition, it returns a non-
+//nil error if the request IP address has been blocked by the session manager
 func (mng *sessionManager) VerifySessionWithIP(id string, r *http.Request) error {
 	sess, err := mng.GetSession(id)
 	if err != nil {
