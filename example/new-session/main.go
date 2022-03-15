@@ -42,7 +42,7 @@ func renderTemplate(tmpl string, w http.ResponseWriter) {
 func main() {
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/login", handleLogin) //we'll eschew pages unnecessary to the example, for simplicity
-	http.HandleFunc("/vallidate", handleVallidate)
+	http.HandleFunc("/validate", handleValidate)
 	http.HandleFunc("/home/", handleHome)
 
 	fmt.Println("Now serving on port 8080")
@@ -58,7 +58,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	renderTemplate("login", w)
 }
 
-func handleVallidate(w http.ResponseWriter, r *http.Request) {
+func handleValidate(w http.ResponseWriter, r *http.Request) {
 	//normally here we would check the password
 	r.ParseForm()
 	userID, err := manager.NewSession(r.FormValue("username"), r) //create new session in manager by passing a username string and the http request
