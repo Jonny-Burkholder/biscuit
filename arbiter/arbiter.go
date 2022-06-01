@@ -61,18 +61,18 @@ func CheckPanic(err error) {
 //Restricted wraps a handler to check authentication before allowing a user to access the page, and
 //returns http.Error() if the user is unauthorized. User may decide on a case-to-case basis which
 //roles are able to access each page
-func Restricted(h http.Handler, mng sessionManager, cookieID string, roles ...string) http.Handler { //this needs to be updated to make role variadic
+func Restricted(next http.Handler, mng sessionManager, cookieID string, roles ...string) http.Handler { //this needs to be updated to make role variadic
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(cookieID)
 		if err != nil {
 			log.Println(err)
-			http.Error(w, "Unauthorized", 401)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		if err := mng.VerifySession(cookie.Value); err != nil {
 			log.Println(err)
-			http.Error(w, "Unauthorized", 401)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
@@ -83,13 +83,30 @@ func Restricted(h http.Handler, mng sessionManager, cookieID string, roles ...st
 		err = mng.CheckRole(roles, cookie.Value)
 		if err != nil {
 			log.Println(err)
-			http.Error(w, "Unauthorized", 401)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 	serving:
 
-		h.ServeHTTP(w, r)
+		next.ServeHTTP(w, r)
+	}
+	return http.HandlerFunc(fn)
+}
+
+//ValidateSession validates the presense of a biscuit session cookie
+func ValidateSession(next http.Handler, mng sessionManager, cookieID string) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie(cookieID)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		}
+		if err := mng.VerifySession(cookie.Value); err != nil {
+			log.Println(err)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		}
+		next.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)
 }
