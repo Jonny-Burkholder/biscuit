@@ -94,7 +94,8 @@ func Restricted(next http.Handler, mng sessionManager, cookieID string, roles ..
 	return http.HandlerFunc(fn)
 }
 
-//ValidateSession validates the presense of a biscuit session cookie
+//ValidateSession checks for a valid biscuit session cookie. It returns
+//401 if no such cookie is found
 func ValidateSession(next http.Handler, mng sessionManager, cookieID string) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(cookieID)
@@ -105,6 +106,26 @@ func ValidateSession(next http.Handler, mng sessionManager, cookieID string) htt
 		if err := mng.VerifySession(cookie.Value); err != nil {
 			log.Println(err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		}
+		next.ServeHTTP(w, r)
+	}
+	return http.HandlerFunc(fn)
+}
+
+//ValidateRedirect checks for a valid biscuit session cookie. It redirects to
+//a given endpoint if no such cookie is found
+func ValidateRedirect(next http.Handler, mng sessionManager, cookieID, redirect string) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie(cookieID)
+		if err != nil {
+			log.Println(err)
+			http.Redirect(w, r, redirect, http.StatusSeeOther)
+			return
+		}
+		if err := mng.VerifySession(cookie.Value); err != nil {
+			log.Println(err)
+			http.Redirect(w, r, redirect, http.StatusSeeOther)
+			return
 		}
 		next.ServeHTTP(w, r)
 	}
