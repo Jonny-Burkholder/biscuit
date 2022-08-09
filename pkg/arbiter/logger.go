@@ -1,19 +1,33 @@
 package arbiter
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+	"log"
+	"os"
+)
 
 // Logger is a simple system for logging errors
 // and other such things
 type Logger struct {
-	Route string `json:"route"` //route defines where the logger writes to
+	Logger log.Logger
 }
 
 // NewDefaultLogger returns a default Arbiter logger
 func NewDefaultLogger() *Logger {
-	return &Logger{}
+	return &Logger{
+		log.New(os.Stderr, "", nil),
+	}
 }
 
-func (l *Logger) Write(v ...any) error {
+// NewLogger, yeah
+func NewLogger(w io.Writer) *Logger {
+	return &Logger{
+		log.New(w, "", nil),
+	}
+}
+
+func (l *Logger) Write(format string, v ...any) {
 	if l.Route == "stdout" || l.Route == "std.Out" || l.Route == "" {
 		fmt.Println(v...)
 		return
@@ -22,14 +36,14 @@ func (l *Logger) Write(v ...any) error {
 	return nil
 }
 
-func (l *Logger) Writef(s string, v ...any) error {
+func (l *Logger) Trace(format string, v ...any) {}
 
-	var towrite string
+func (l *Logger) Debug(format string, v ...any) {}
 
-	if len(v) > 0 {
-		towrite = fmt.Sprintf(s, v...)
-	}
-	// TODO: write string to log
+func (l *Logger) Info(format string, v ...any) {}
 
-	return nil
-}
+func (l *Logger) Warn(format string, v ...any) {}
+
+func (l *Logger) Fatal(format string, v ...any) {}
+
+func (l *Logger) Panic(format string, v ...any) {}
