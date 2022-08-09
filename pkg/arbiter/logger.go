@@ -8,6 +8,11 @@ type Logger struct {
 	Route string `json:"route"` //route defines where the logger writes to
 }
 
+// NewDefaultLogger returns a default Arbiter logger
+func NewDefaultLogger() *Logger {
+	return &Logger{}
+}
+
 func (l *Logger) Write(v ...any) error {
 	if l.Route == "stdout" || l.Route == "std.Out" || l.Route == "" {
 		fmt.Println(v...)
